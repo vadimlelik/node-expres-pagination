@@ -2,63 +2,46 @@ const express = require('express')
 const app = express()
 const mongoose = require('mongoose')
 const User = require('./users')
+const paginatedResults = require('./middleweare/paginatedResults.js')
 
-mongoose.connect('mongodb://localhost/pagination', { useNewUrlParser: true, useUnifiedTopology: true })
-const db = mongoose.connection
-db.once('open', async () => {
-	if (await User.countDocuments().exec() > 0) return
+const dotenv = require('dotenv')
 
-	Promise.all([
-		User.create({ name: 'User 1' }),
-		User.create({ name: 'User 2' }),
-		User.create({ name: 'User 3' }),
-		User.create({ name: 'User 4' }),
-		User.create({ name: 'User 5' }),
-		User.create({ name: 'User 6' }),
-		User.create({ name: 'User 7' }),
-		User.create({ name: 'User 8' }),
-		User.create({ name: 'User 9' }),
-		User.create({ name: 'User 10' }),
-		User.create({ name: 'User 11' }),
-		User.create({ name: 'User 12' })
-	]).then(() => console.log('Added Users'))
-})
 
-app.get('/users', paginatedResults(User), (req, res) => {
-	res.json(res.paginatedResults)
-})
+dotenv.config()
 
-function paginatedResults(model) {
-	return async (req, res, next) => {
-		const page = parseInt(req.query.page)
-		const limit = parseInt(req.query.limit)
 
-		const startIndex = (page - 1) * limit
-		const endIndex = page * limit
+const DB_NAME = process.env.DB_NAME
+const DB_PASSWORD = process.env.DB_PASSWORD
+const DB_USER = process.env.DB_USER
+const PORT = process.env.PORT
 
-		const results = {}
 
-		if (endIndex < await model.countDocuments().exec()) {
-			results.next = {
-				page: page + 1,
-				limit: limit
-			}
-		}
+const start = async () => {
+    const db = mongoose.connection
 
-		if (startIndex > 0) {
-			results.previous = {
-				page: page - 1,
-				limit: limit
-			}
-		}
-		try {
-			results.results = await model.find().limit(limit).skip(startIndex).exec()
-			res.paginatedResults = results
-			next()
-		} catch (e) {
-			res.status(500).json({ message: e.message })
-		}
-	}
+    db.once('open', async () => {
+        if (await User.countDocuments().exec() > 0) return
+
+        Promise.all([User.create({name: 'User 1'}), User.create({name: 'User 2'}), User.create({name: 'User 3'}), User.create({name: 'User 4'}), User.create({name: 'User 5'}), User.create({name: 'User 6'}), User.create({name: 'User 7'}), User.create({name: 'User 8'}), User.create({name: 'User 9'}), User.create({name: 'User 10'}), User.create({name: 'User 11'}), User.create({name: 'User 12'})]).then(() => console.log('Added Users'))
+    })
+
+    await mongoose.connect(`mongodb://${DB_USER}:j8LPDxHW3fsikwJOvW3T@n1-c2-mongodb-clevercloud-customers.services.clever-cloud.com:27017,n2-c2-mongodb-clevercloud-customers.services.clever-cloud.com:27017/${DB_NAME}?replicaSet=rs0`)
+
+    app.listen(PORT || 3002, () => {
+        console.log(`Server started ${PORT}`)
+    })
+
+    try {
+
+    } catch (e) {
+        console.log(e)
+    }
+
 }
 
-app.listen(3000)
+
+app.get('/users', paginatedResults(User), (req, res) => {
+    res.json(res.paginatedResults)
+})
+
+start()
